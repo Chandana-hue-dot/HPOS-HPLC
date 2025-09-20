@@ -3,7 +3,7 @@
 # Data Source URLs
 DATA_SOURCES = {
     'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-    'hplc_data_path': r'C:\Users\omi_i\Downloads\all_data.csv'  # Local file path as in original code
+    'hplc_data_path': 'https://docs.google.com/spreadsheets/d/1N8sH0uHgtKh_AbJZfnsut3V9S5-UZQuhzQHLJoEy8Cw/edit?usp=sharing # Local file path as in original code
 }
 
 # HPOS Analysis Thresholds
