@@ -3,7 +3,7 @@
 # Data Source URLs
 DATA_SOURCES = {
     'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-    'hplc_data_path': 'https://docs.google.com/spreadsheets/d/1N8sH0uHgtKh_AbJZfnsut3V9S5-UZQuhzQHLJoEy8Cw/edit?usp=sharing # Local file path as in original code
+    'hplc_data_path':'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAHLMLCH4GO0WGXgUXO7hz3Lvc66MIgMffh3JnqcO3QSGX2Pk_YmbCRuD2welz7-aDhINSixl9g-nN/pubhtml?gid=43184154&single=true'# Local file path as in original code
 }
 
 # HPOS Analysis Thresholds
