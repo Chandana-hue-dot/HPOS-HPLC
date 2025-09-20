@@ -59,7 +59,7 @@ st.markdown("""
 def load_config():
     return {
         'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-        'hplc_data_path': r'C:\Users\omi_i\Downloads\all_data.csv',  # Keep original local file path for HPLC data
+        'hplc_data_path': r'https://docs.google.com/spreadsheets/d/1N8sH0uHgtKh_AbJZfnsut3V9S5-UZQuhzQHLJoEy8Cw/edit?usp=sharing',  # Keep original local file path for HPLC data
         'hpos_threshold_low': 0.38,
         'hpos_threshold_high': 0.42,
         'target_hplc_tests': 1000,  # Configure based on your target
