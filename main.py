@@ -61,7 +61,7 @@ def load_config():
     # For Streamlit Cloud deployment - use Google Sheets URLs
     return {
         'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/YOUR_HPLC_SHEET_ID/pub?gid=0&single=true&output=csv',  # Replace with your actual HPLC Google Sheets URL
+        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAHLMLCH4GO0WGXgUXO7hz3Lvc66MIgMffh3JnqcO3QSGX2Pk_YmbCRuD2welz7-aDhINSixl9g-nN/pub?gid=43184154&single=true&output=csv',  # Replace with your actual HPLC Google Sheets URL
         'hpos_threshold_low': 0.38,
         'hpos_threshold_high': 0.42,
         'target_hplc_tests': 1000,
