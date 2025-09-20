@@ -59,7 +59,7 @@ st.markdown("""
 def load_config():
     return {
         'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/1N8sH0uHgtKh_AbJZfnsut3V9S5-UZQuhzQHLJoEy8Cw/edit?usp=sharing',  # Keep original local file path for HPLC data
+        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAHLMLCH4GO0WGXgUXO7hz3Lvc66MIgMffh3JnqcO3QSGX2Pk_YmbCRuD2welz7-aDhINSixl9g-nN/pubhtml?gid=43184154&single=true',  # Keep original local file path for HPLC data
         'hpos_threshold_low': 0.38,
         'hpos_threshold_high': 0.42,
         'target_hplc_tests': 1000,  # Configure based on your target
