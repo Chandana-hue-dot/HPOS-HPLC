@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import requests
 from io import StringIO
+import os
 
 # Page configuration
 st.set_page_config(
@@ -57,12 +58,13 @@ st.markdown("""
 # Configuration
 @st.cache_data
 def load_config():
+    # For Streamlit Cloud deployment - use Google Sheets URLs
     return {
         'hpos_data_url': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTVZqlJ7YBLKbPSWwYTA5tAr401wUIBpp7ALPvEOKch91uxdvTevpvWs1FuQ1hQKB84RsZyAFsJYRRr/pub?gid=1058968279&single=true&output=csv',
-        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAHLMLCH4GO0WGXgUXO7hz3Lvc66MIgMffh3JnqcO3QSGX2Pk_YmbCRuD2welz7-aDhINSixl9g-nN/pubhtml?gid=43184154&single=true',  # Keep original local file path for HPLC data
+        'hplc_data_path': 'https://docs.google.com/spreadsheets/d/YOUR_HPLC_SHEET_ID/pub?gid=0&single=true&output=csv',  # Replace with your actual HPLC Google Sheets URL
         'hpos_threshold_low': 0.38,
         'hpos_threshold_high': 0.42,
-        'target_hplc_tests': 1000,  # Configure based on your target
+        'target_hplc_tests': 1000,
         'theme': {
             'primary_color': '#4F46E5',
             'background_color': '#ffffff',
@@ -71,23 +73,109 @@ def load_config():
         }
     }
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_data(hpos_url, hplc_path):
-    """Load HPOS data from Google Sheets and HPLC data from local file"""
+def create_sample_hplc_data():
+    """Create sample HPLC data for demo when file is not available"""
+    np.random.seed(42)
+    n_samples = 2725
+    
+    sample_data = {
+        'SL No.': range(1, n_samples + 1),
+        'Sickle Id': [f'SK{i:04d}' for i in range(1, n_samples + 1)],
+        'Age': [f'{np.random.randint(1, 80)} yrs' for _ in range(n_samples)],
+        'Gender': np.random.choice(['M', 'F', 'Male', 'Female'], n_samples),
+        'District': np.random.choice(['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'], n_samples),
+        'Pathology stated HPLC RESULT': np.random.choice(['Normal', 'Sickle Cell Trait', 'Sickle Cell Disease', None], n_samples, p=[0.6, 0.2, 0.15, 0.05]),
+        'Lab_HPOS_Test': np.random.choice(['Done', 'Pending', 'Not Required'], n_samples, p=[0.7, 0.2, 0.1])
+    }
+    
+    return pd.DataFrame(sample_data)
+
+@st.cache_data(ttl=3600)
+def load_data(hpos_url, hplc_source):
+    """Load HPOS data from Google Sheets and HPLC data from file or create sample data"""
+    hpos_data = None
+    hplc_data = None
+    
+    # Load HPOS data from Google Sheets
     try:
-        # Load HPOS data from Google Sheets
-        hpos_response = requests.get(hpos_url)
-        hpos_data = pd.read_csv(StringIO(hpos_response.text))
-        hpos_cleaned = hpos_data.dropna(how="all")
+        hpos_response = requests.get(hpos_url, timeout=30)
+        hpos_response.raise_for_status()
         
-        # Load HPLC data from local CSV file
-        hplc_data = pd.read_csv(hplc_path)
-        hplc_cleaned = hplc_data.dropna(how="all")
+        # Try different CSV parsing options
+        try:
+            hpos_data = pd.read_csv(StringIO(hpos_response.text))
+        except pd.errors.ParserError:
+            # Try with different separator or quoting
+            hpos_data = pd.read_csv(StringIO(hpos_response.text), sep=',', quotechar='"', skipinitialspace=True)
         
-        return hpos_cleaned, hplc_cleaned
+        hpos_data = hpos_data.dropna(how="all")
+        st.success("✅ Loaded HPOS data from Google Sheets")
+        
     except Exception as e:
-        st.error(f"Error loading data: {str(e)}")
-        return None, None
+        st.error(f"Error loading HPOS data: {str(e)}")
+        st.info("Will continue with HPLC data analysis only")
+    
+    # Load HPLC data
+    try:
+        if hplc_source and hplc_source.startswith('http'):
+            # Load from Google Sheets URL
+            hplc_response = requests.get(hplc_source, timeout=30)
+            hplc_response.raise_for_status()
+            
+            # Try multiple parsing strategies for problematic CSV
+            csv_content = hplc_response.text
+            
+            # Strategy 1: Standard parsing
+            try:
+                hplc_data = pd.read_csv(StringIO(csv_content))
+            except pd.errors.ParserError as pe:
+                st.warning(f"CSV parsing issue: {str(pe)}")
+                
+                # Strategy 2: Try with error handling
+                try:
+                    hplc_data = pd.read_csv(StringIO(csv_content), error_bad_lines=False, warn_bad_lines=True)
+                    st.info("⚠️ Some problematic lines were skipped during CSV parsing")
+                except:
+                    # Strategy 3: Try with different parameters
+                    try:
+                        hplc_data = pd.read_csv(StringIO(csv_content), sep=',', quotechar='"', skipinitialspace=True, on_bad_lines='skip')
+                        st.info("⚠️ Used flexible CSV parsing - some data may have been adjusted")
+                    except Exception as e3:
+                        st.error(f"All CSV parsing strategies failed: {str(e3)}")
+                        # Create sample data as fallback
+                        hplc_data = create_sample_hplc_data()
+                        st.warning("🔄 Using sample HPLC data due to CSV parsing issues")
+            
+            if hplc_data is not None:
+                hplc_data = hplc_data.dropna(how="all")
+                st.success("✅ Loaded HPLC data from Google Sheets")
+                
+        elif hplc_source and os.path.exists(hplc_source):
+            # Load from local file with error handling
+            try:
+                hplc_data = pd.read_csv(hplc_source)
+            except pd.errors.ParserError:
+                try:
+                    hplc_data = pd.read_csv(hplc_source, error_bad_lines=False, warn_bad_lines=True)
+                    st.info("⚠️ Some problematic lines were skipped during local CSV parsing")
+                except:
+                    hplc_data = pd.read_csv(hplc_source, sep=',', quotechar='"', skipinitialspace=True, on_bad_lines='skip')
+                    st.info("⚠️ Used flexible local CSV parsing")
+            
+            hplc_data = hplc_data.dropna(how="all")
+            st.success("✅ Loaded HPLC data from local file")
+        else:
+            # Create sample data for demonstration
+            hplc_data = create_sample_hplc_data()
+            st.warning("⚠️ Using sample HPLC data for demonstration")
+            
+    except Exception as e:
+        st.error(f"Error loading HPLC data: {str(e)}")
+        # Create sample data as fallback
+        hplc_data = create_sample_hplc_data()
+        st.warning("🔄 Using sample HPLC data due to loading error")
+    
+    return hpos_data, hplc_data
 
 def process_age_data(df):
     """Process age data and create age groups"""
@@ -146,6 +234,34 @@ def main():
         st.header("📊 Dashboard Navigation")
         st.markdown("Welcome to Project Chandana Analytics")
         
+        # Data debugging section
+        if st.sidebar.button("🔍 Debug Data Issues"):
+            st.subheader("🔍 Data Debugging Information")
+            
+            # Check HPLC data structure
+            if hplc_data is not None:
+                st.write("**HPLC Data Info:**")
+                st.write(f"Shape: {hplc_data.shape}")
+                st.write(f"Columns: {list(hplc_data.columns)}")
+                st.write("First few rows:")
+                st.dataframe(hplc_data.head(3))
+                
+                # Check for common issues
+                if hplc_data.isnull().any().any():
+                    st.warning("⚠️ HPLC data contains null values")
+                
+                # Check column consistency
+                if len(hplc_data.columns) != len(set(hplc_data.columns)):
+                    st.warning("⚠️ HPLC data has duplicate column names")
+            
+            # Check HPOS data structure  
+            if hpos_data is not None:
+                st.write("**HPOS Data Info:**")
+                st.write(f"Shape: {hpos_data.shape}")
+                st.write(f"Columns: {list(hpos_data.columns)}")
+                st.write("First few rows:")
+                st.dataframe(hpos_data.head(3))
+        
         # Data refresh button
         if st.button("🔄 Refresh Data"):
             st.cache_data.clear()
@@ -158,8 +274,8 @@ def main():
             config['hplc_data_path']
         )
     
-    if hpos_data is None or hplc_data is None:
-        st.error("Failed to load data. Please check your data sources.")
+    if hplc_data is None:
+        st.error("Critical error: Could not load any data.")
         return
     
     # Store in session state
@@ -280,7 +396,7 @@ def main():
     with tab3:
         st.header("🏥 HPOS Analysis")
         
-        if 'deviceRatio' in hpos_data.columns:
+        if hpos_data is not None and 'deviceRatio' in hpos_data.columns:
             # Convert deviceRatio to numeric, handling any non-numeric values
             hpos_data['deviceRatio_numeric'] = pd.to_numeric(hpos_data['deviceRatio'], errors='coerce')
             
@@ -348,6 +464,8 @@ def main():
                 
                 if invalid_samples > 0:
                     st.info(f"Data Quality: {valid_samples} valid samples out of {total_samples} total samples. {invalid_samples} samples had invalid ratio values.")
+        elif hpos_data is None:
+            st.warning("HPOS data could not be loaded from Google Sheets. Please check the connection.")
         else:
             st.warning("Device ratio data not found in HPOS dataset")
     
@@ -358,8 +476,11 @@ def main():
         st.subheader("HPLC Data Sample")
         st.dataframe(hplc_processed.head(20), use_container_width=True)
         
-        st.subheader("HPOS Data Sample")
-        st.dataframe(hpos_data.head(20), use_container_width=True)
+        if hpos_data is not None:
+            st.subheader("HPOS Data Sample")
+            st.dataframe(hpos_data.head(20), use_container_width=True)
+        else:
+            st.info("HPOS data not available - check Google Sheets connection")
         
         # Download buttons
         col1, col2 = st.columns(2)
@@ -374,13 +495,16 @@ def main():
             )
         
         with col2:
-            csv_hpos = hpos_data.to_csv(index=False)
-            st.download_button(
-                label="📥 Download HPOS Data",
-                data=csv_hpos,
-                file_name=f"hpos_data_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
+            if hpos_data is not None:
+                csv_hpos = hpos_data.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download HPOS Data",
+                    data=csv_hpos,
+                    file_name=f"hpos_data_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.info("HPOS data not available for download")
 
 if __name__ == "__main__":
     main()
